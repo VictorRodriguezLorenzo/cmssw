@@ -196,7 +196,7 @@ namespace gen {
   void WeightHelper::cleanupOrphanCentralWeight(WeightGroupInfoContainer& weightGroups) const {
     auto centralIt = std::find_if(std::begin(weightGroups), std::end(weightGroups), [](auto& entry) {
       return entry->weightType() == gen::WeightType::kScaleWeights &&
-             static_cast<ScaleWeightGroupInfo*>(entry.get())->containsCentralWeight();
+             !(static_cast<ScaleWeightGroupInfo*>(entry.get())->containsCentralWeight());
     });
     if (centralIt == std::end(weightGroups))
       return;
