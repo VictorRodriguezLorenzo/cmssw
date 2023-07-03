@@ -35,6 +35,8 @@ namespace gen {
         boost::split(fixedHeaderLines, fullHeader, boost::is_any_of("\n"));
         swapHeaders(fixedHeaderLines);
         fullHeader = boost::algorithm::join(fixedHeaderLines, "\n");
+        if (debug_)
+          std::cout << "Full header is now \n" << fullHeader << std::endl;
         xmlError = xmlDoc.Parse(fullHeader.c_str());
       } else if (errorType == ErrorType::TrailingStr) {
         if (debug_)
@@ -107,8 +109,6 @@ namespace gen {
       groupIndex++;
     }
     auto groups = buildGroups(parsedWeights, addUnassociatedGroup);
-    if (debug_)
-      printWeights(groups);
     return groups;
   }
 
