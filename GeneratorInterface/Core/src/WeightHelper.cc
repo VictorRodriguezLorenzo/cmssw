@@ -232,8 +232,9 @@ namespace gen {
 
   void WeightHelper::printWeights(const WeightGroupInfoContainer& weightGroups) const {
     // checks
+    unsigned i = 0;
     for (const auto& group : weightGroups) {
-      std::cout << std::boolalpha << group->name() << " (" << group->firstId() << "-" << group->lastId()
+      std::cout << std::boolalpha << i << ": " << group->name() << " [" << static_cast<std::underlying_type<gen::WeightType>::type>(group->weightType()) << "] (" << group->firstId() << "-" << group->lastId()
                 << "): " << group->isWellFormed() << std::endl;
       if (group->weightType() == gen::WeightType::kScaleWeights) {
         const auto& groupScale = *static_cast<gen::ScaleWeightGroupInfo*>(group.get());
@@ -266,6 +267,7 @@ namespace gen {
         std::vector<std::string> labels = groupPS.weightLabels();
         groupPS.printVariables();
       }
+      ++i;
     }
   }
 
@@ -334,9 +336,17 @@ namespace gen {
       else if (group->weightType() == gen::WeightType::kPartonShowerWeights)
         updatePartonShowerInfo(*static_cast<gen::PartonShowerWeightGroupInfo*>(group.get()), weight);
     }
+    if (debug_) {
+      std::cout << "Groups BEFORE cleanup:" << std::endl;
+      printWeights(weightGroups);
+    }
     cleanupOrphanCentralWeight(weightGroups);
     if (addUnassociated) {
       addUnassociatedGroup(weightGroups);
+    }
+    if (debug_) {
+      std::cout << "Groups AFTER cleanup:" << std::endl;
+      printWeights(weightGroups);
     }
     return weightGroups;
   }
