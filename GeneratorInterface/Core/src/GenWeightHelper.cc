@@ -55,8 +55,6 @@ namespace gen {
       index++;
     }
     auto groups = buildGroups(parsedWeights, addUnassociated);
-    if (debug_)
-      printWeights(groups);
     return groups;
   }
 }  // namespace gen
