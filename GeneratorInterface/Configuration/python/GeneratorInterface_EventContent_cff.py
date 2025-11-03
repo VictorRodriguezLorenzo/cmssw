@@ -19,6 +19,10 @@ GeneratorInterfaceRAW = cms.PSet(
         'keep GenLumiInfoProduct_generator_*_*',
         'keep GenEventInfoProduct_generator_*_*',
         'keep edmHepMCProduct_generatorSmeared_*_*',
+        'keep GenWeightProduct_lheWeights_*_*',
+        'keep GenWeightProduct_genWeights_*_*',
+        'keep GenWeightInfoProduct_lheWeights_*_*',
+        'keep GenWeightInfoProduct_genWeights_*_*',
         'keep GenFilterInfo_*_*_*',
         'keep *_genParticles_*_*'
     )
@@ -34,6 +38,10 @@ GeneratorInterfaceRECO = cms.PSet(
         'keep GenLumiInfoProduct_generator_*_*',
         'keep GenEventInfoProduct_generator_*_*',
         'keep edmHepMCProduct_generatorSmeared_*_*',
+        'keep GenWeightProduct_lheWeights_*_*',
+        'keep GenWeightProduct_genWeights_*_*',
+        'keep GenWeightInfoProduct_lheWeights_*_*',
+        'keep GenWeightInfoProduct_genWeights_*_*',
         'keep GenFilterInfo_*_*_*',
         'keep *_genParticles_*_*'
     )
@@ -48,6 +56,10 @@ GeneratorInterfaceAOD = cms.PSet(
         'keep GenLumiInfoHeader_generator_*_*',
         'keep GenLumiInfoProduct_generator_*_*',
         'keep GenEventInfoProduct_generator_*_*',
+        'keep GenWeightProduct_lheWeights_*_*',
+        'keep GenWeightProduct_genWeights_*_*',
+        'keep GenWeightInfoProduct_lheWeights_*_*',
+        'keep GenWeightInfoProduct_genWeights_*_*',
         'keep GenFilterInfo_*_*_*',
         'keep *_genParticles_*_*'
     )
