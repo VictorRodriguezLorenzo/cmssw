@@ -13,45 +13,44 @@
 // system include files
 #include <algorithm>
 #include <memory>
-
+#include <string>
 #include "Compression.h"
 #include "TFile.h"
 #include "TObjString.h"
 #include "TROOT.h"
 #include "TTree.h"
-#include <string>
+#include <iostream>
 
 // user include files
-#include "FWCore/Framework/interface/one/OutputModule.h"
-#include "FWCore/Framework/interface/RunForOutput.h"
-#include "FWCore/Framework/interface/LuminosityBlockForOutput.h"
-#include "FWCore/Framework/interface/EventForOutput.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/MessageLogger/interface/JobReport.h"
-#include "FWCore/Utilities/interface/GlobalIdentifier.h"
-#include "FWCore/Utilities/interface/Digest.h"
-#include "IOPool/Provenance/interface/CommonProvenanceFiller.h"
-#include "DataFormats/Provenance/interface/BranchType.h"
-#include "DataFormats/Provenance/interface/ProductDescription.h"
-#include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/NanoAOD/interface/UniqueString.h"
+#include "DataFormats/Provenance/interface/BranchDescription.h"
+#include "DataFormats/Provenance/interface/BranchType.h"
+#include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
+#include "FWCore/Framework/interface/EventForOutput.h"
+#include "FWCore/Framework/interface/LuminosityBlockForOutput.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Framework/interface/RunForOutput.h"
+#include "FWCore/Framework/interface/one/OutputModule.h"
+#include "FWCore/MessageLogger/interface/JobReport.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/Digest.h"
+#include "FWCore/Utilities/interface/GlobalIdentifier.h"
+#include "IOPool/Provenance/interface/CommonProvenanceFiller.h"
+#include "PhysicsTools/NanoAOD/plugins/EventStringOutputBranches.h"
+#include "PhysicsTools/NanoAOD/plugins/LumiOutputBranches.h"
+#include "PhysicsTools/NanoAOD/plugins/SummaryTableOutputBranches.h"
 #include "PhysicsTools/NanoAOD/plugins/TableOutputBranches.h"
 #include "PhysicsTools/NanoAOD/plugins/LumiOutputBranches.h"
 #include "PhysicsTools/NanoAOD/plugins/TriggerOutputBranches.h"
-#include "PhysicsTools/NanoAOD/plugins/EventStringOutputBranches.h"
-#include "PhysicsTools/NanoAOD/plugins/SummaryTableOutputBranches.h"
-
-#include <iostream>
+#include "tbb/task_arena.h"
 
 #include "oneapi/tbb/task_arena.h"
 
 class NanoAODOutputModule : public edm::one::OutputModule<> {
 public:
   NanoAODOutputModule(edm::ParameterSet const& pset);
-  ~NanoAODOutputModule() override;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -69,7 +68,7 @@ private:
   int m_eventsSinceFlush{0};
   std::string m_compressionAlgorithm;
   bool m_writeProvenance;
-  bool m_fakeName;  //crab workaround, remove after crab is fixed
+  bool m_fakeName;  // crab workaround, remove after crab is fixed
   int m_autoFlush;
   edm::ProcessHistoryRegistry m_processHistoryRegistry;
   edm::JobReport::Token m_jrToken;
@@ -127,8 +126,11 @@ private:
   private:
     UInt_t m_run;
   } m_commonRunBranches;
-
+  
   std::vector<TableOutputBranches> m_tables;
+  std::vector<edm::EDGetToken> m_tableTokens;
+  std::vector<edm::EDGetToken> m_tableVectorTokens;
+  std::vector<edm::EDGetToken> m_runFlatTableTokens;
   std::vector<TriggerOutputBranches> m_triggers;
   bool m_triggers_areSorted = false;
   std::vector<EventStringOutputBranches> m_evstrings;
@@ -167,7 +169,7 @@ NanoAODOutputModule::NanoAODOutputModule(edm::ParameterSet const& pset)
 NanoAODOutputModule::~NanoAODOutputModule() {}
 
 void NanoAODOutputModule::write(edm::EventForOutput const& iEvent) {
-  //Get data from 'e' and write it to the file
+  // Get data from 'e' and write it to the file
   edm::Service<edm::JobReport> jr;
   jr->eventWrittenToFile(m_jrToken, iEvent.id().run(), iEvent.id().event());
 
@@ -182,19 +184,22 @@ void NanoAODOutputModule::write(edm::EventForOutput const& iEvent) {
         float percentClusterDone = m_firstFlush / static_cast<float>(m_autoFlush);
         maxMemory = static_cast<float>(m_tree->GetTotBytes()) / percentClusterDone;
       } else if (m_tree->GetZipBytes() == 0) {
-        maxMemory = 100 * 1024 * 1024;  // Degenerate case of no information in the tree; arbitrary value
+        maxMemory = 100 * 1024 * 1024;  // Degenerate case of no information in
+                                        // the tree; arbitrary value
       } else {
-        // Estimate the memory we'll be using by scaling the current compression ratio.
+        // Estimate the memory we'll be using by scaling the current compression
+        // ratio.
         float cxnRatio = m_tree->GetTotBytes() / static_cast<float>(m_tree->GetZipBytes());
         maxMemory = -m_autoFlush * cxnRatio;
         float percentBytesDone = -m_tree->GetZipBytes() / static_cast<float>(m_autoFlush);
         m_autoFlush = m_firstFlush / percentBytesDone;
       }
-      //std::cout << "OptimizeBaskets: total bytes " << m_tree->GetTotBytes() << std::endl;
-      //std::cout << "OptimizeBaskets: zip bytes " << m_tree->GetZipBytes() << std::endl;
-      //std::cout << "OptimizeBaskets: autoFlush " << m_autoFlush << std::endl;
-      //std::cout << "OptimizeBaskets: maxMemory " << static_cast<uint32_t>(maxMemory) << std::endl;
-      //m_tree->OptimizeBaskets(static_cast<uint32_t>(maxMemory), 1, "d");
+      // std::cout << "OptimizeBaskets: total bytes " << m_tree->GetTotBytes()
+      // << std::endl; std::cout << "OptimizeBaskets: zip bytes " <<
+      // m_tree->GetZipBytes() << std::endl; std::cout << "OptimizeBaskets:
+      // autoFlush " << m_autoFlush << std::endl; std::cout << "OptimizeBaskets:
+      // maxMemory " << static_cast<uint32_t>(maxMemory) << std::endl;
+      // m_tree->OptimizeBaskets(static_cast<uint32_t>(maxMemory), 1, "d");
       m_tree->OptimizeBaskets(static_cast<uint32_t>(maxMemory), 1, "");
     }
     if (m_eventsSinceFlush == m_autoFlush) {
@@ -206,11 +211,33 @@ void NanoAODOutputModule::write(edm::EventForOutput const& iEvent) {
 
   m_commonBranches.fill(iEvent.eventAuxiliary());
   // fill all tables, starting from main tables and then doing extension tables
-  for (unsigned int extensions = 0; extensions <= 1; ++extensions) {
-    for (auto& t : m_tables)
-      t.fill(iEvent, *m_tree, extensions);
+  std::vector<nanoaod::FlatTable const*> tables;
+  for (auto& tableToken : m_tableTokens) {
+    edm::Handle<nanoaod::FlatTable> handle;
+    iEvent.getByToken(tableToken, handle);
+    tables.push_back(&(*handle));
   }
-  if (!m_triggers_areSorted) {  // sort triggers/flags in inverse processHistory order, to save without any special label the most recent ones
+  for (auto& tableToken : m_tableVectorTokens) {
+    edm::Handle<std::vector<nanoaod::FlatTable>> handle;
+    iEvent.getByToken(tableToken, handle);
+    for (auto const& table : *handle) {
+      tables.push_back(&table);
+    }
+  }
+
+  if (m_tables.empty()) {
+    m_tables.resize(tables.size());
+  }
+  for (unsigned int extensions = 0; extensions <= 1; ++extensions) {
+    size_t iTable = 0;
+    for (auto& table : tables) {
+      m_tables[iTable].fill(*table, *m_tree, extensions);
+      ++iTable;
+    }
+  }
+  if (!m_triggers_areSorted) {  // sort triggers/flags in inverse processHistory
+                                // order, to save without any special label the
+                                // most recent ones
     std::vector<std::string> pnames;
     for (auto& p : iEvent.processHistory())
       pnames.push_back(p.processName());
@@ -260,8 +287,12 @@ void NanoAODOutputModule::writeRun(edm::RunForOutput const& iRun) {
     t.fill(iRun, *m_runTree);
 
   for (unsigned int extensions = 0; extensions <= 1; ++extensions) {
-    for (auto& t : m_runFlatTables)
-      t.fill(iRun, *m_runTree, extensions);
+    size_t iRunTable = 0;
+    for (auto& token : m_runFlatTableTokens) {
+      edm::Handle<nanoaod::FlatTable> handle;
+      iRun.getByToken(token, handle);
+      m_runFlatTables[iRunTable].fill(*handle, *m_runTree, extensions);
+    }
   }
 
   edm::Handle<nanoaod::UniqueString> hstring;
@@ -273,7 +304,7 @@ void NanoAODOutputModule::writeRun(edm::RunForOutput const& iRun) {
         throw cms::Exception("LogicError", "Inconsistent nanoMetadata " + p.first + " (" + hstring->str() + ")");
     } else {
       auto ostr = std::make_unique<TObjString>(hstring->str().c_str());
-      m_file->WriteTObject(ostr.get(), p.first.c_str());
+      m_file->WriteTObject(ostr.release(), p.first.c_str());
     }
   }
 
@@ -313,6 +344,7 @@ void NanoAODOutputModule::openFile(edm::FileBlock const&) {
   }
   /* Setup file structure here */
   m_tables.clear();
+  m_tableTokens.clear();
   m_triggers.clear();
   m_triggers_areSorted = false;
   m_evstrings.clear();
@@ -320,15 +352,19 @@ void NanoAODOutputModule::openFile(edm::FileBlock const&) {
   m_lumiTables.clear();
   m_lumiTables2.clear();
   m_runFlatTables.clear();
+  m_runFlatTableTokens.clear();
   const auto& keeps = keptProducts();
   for (const auto& keep : keeps[edm::InEvent]) {
-    if (keep.first->className() == "nanoaod::FlatTable")
-      m_tables.emplace_back(keep.first, keep.second);
-    else if (keep.first->className() == "edm::TriggerResults") {
+    if (keep.first->className() == "nanoaod::FlatTable") {
+      m_tableTokens.emplace_back(keep.second);
+    } else if (keep.first->className() == "std::vector<nanoaod::FlatTable>") {
+      m_tableVectorTokens.emplace_back(keep.second);
+    } else if (keep.first->className() == "edm::TriggerResults") {
       m_triggers.emplace_back(keep.first, keep.second);
     } else if (keep.first->className() == "std::basic_string<char,std::char_traits<char> >" &&
                keep.first->productInstanceName() == "genModel") {  // friendlyClassName == "String"
-      m_evstrings.emplace_back(keep.first, keep.second, true);     // update only at lumiBlock transitions
+      m_evstrings.emplace_back(keep.first, keep.second,
+                               true);  // update only at lumiBlock transitions
     } else
       throw cms::Exception("Configuration", "NanoAODOutputModule cannot handle class " + keep.first->className());
   }
@@ -336,7 +372,7 @@ void NanoAODOutputModule::openFile(edm::FileBlock const&) {
   for (const auto& keep : keeps[edm::InLumi]) {
     if (keep.first->className() == "nanoaod::MergeableCounterTable")
       m_lumiTables.push_back(SummaryTableOutputBranches(keep.first, keep.second));
-    else if (keep.first->className() == "nanoaod::UniqueString" && keep.first->moduleLabel() == "nanoMetadata")
+    else if (keep.first->className() == "nanoaod::UniqueString")
       m_nanoMetadata.emplace_back(keep.first->productInstanceName(), keep.second);
     else if (keep.first->className() == "nanoaod::FlatTable")
       m_lumiTables2.push_back(LumiOutputBranches(keep.first, keep.second));
@@ -349,10 +385,10 @@ void NanoAODOutputModule::openFile(edm::FileBlock const&) {
   for (const auto& keep : keeps[edm::InRun]) {
     if (keep.first->className() == "nanoaod::MergeableCounterTable")
       m_runTables.push_back(SummaryTableOutputBranches(keep.first, keep.second));
-    else if (keep.first->className() == "nanoaod::UniqueString" && keep.first->moduleLabel() == "nanoMetadata")
+    else if (keep.first->className() == "nanoaod::UniqueString")
       m_nanoMetadata.emplace_back(keep.first->productInstanceName(), keep.second);
     else if (keep.first->className() == "nanoaod::FlatTable")
-      m_runFlatTables.emplace_back(keep.first, keep.second);
+      m_runFlatTableTokens.emplace_back(keep.second);
     else
       throw cms::Exception("Configuration",
                            "NanoAODOutputModule cannot handle class " + keep.first->className() + " in Run branch");
@@ -411,25 +447,29 @@ void NanoAODOutputModule::fillDescriptions(edm::ConfigurationDescriptions& descr
 
   desc.addUntracked<int>("compressionLevel", 9)->setComment("ROOT compression level of output file.");
   desc.addUntracked<std::string>("compressionAlgorithm", "ZLIB")
-      ->setComment("Algorithm used to compress data in the ROOT output file, allowed values are ZLIB and LZMA");
+      ->setComment(
+          "Algorithm used to compress data in the ROOT output file, allowed "
+          "values are ZLIB and LZMA");
   desc.addUntracked<bool>("saveProvenance", true)
       ->setComment("Save process provenance information, e.g. for edmProvDump");
   desc.addUntracked<bool>("fakeNameForCrab", false)
       ->setComment(
-          "Change the OutputModule name in the fwk job report to fake PoolOutputModule. This is needed to run on cran "
+          "Change the OutputModule name in the fwk job report to fake "
+          "PoolOutputModule. This is needed to run on cran "
           "(and publish) till crab is fixed");
   desc.addUntracked<int>("autoFlush", -10000000)->setComment("Autoflush parameter for ROOT file");
 
-  //replace with whatever you want to get from the EDM by default
+  // replace with whatever you want to get from the EDM by default
+>>>>>>> d074cc83cb7 (First commit for Randomized Parameters weight handling implementation)
   const std::vector<std::string> keep = {"drop *",
                                          "keep nanoaodFlatTable_*Table_*_*",
                                          "keep edmTriggerResults_*_*_*",
                                          "keep String_*_genModel_*",
                                          "keep nanoaodMergeableCounterTable_*Table_*_*",
                                          "keep nanoaodUniqueString_nanoMetadata_*_*"};
-  edm::one::OutputModule<>::fillDescription(desc, keep);
+  edm::one::OutputModule<>::fillDescription(desc);
 
-  //Used by Workflow management for their own meta data
+  // Used by Workflow management for their own meta data
   edm::ParameterSetDescription dataSet;
   dataSet.setAllowAnything();
   desc.addUntracked<edm::ParameterSetDescription>("dataset", dataSet)

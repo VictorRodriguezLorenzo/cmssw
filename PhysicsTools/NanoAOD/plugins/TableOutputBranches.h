@@ -1,9 +1,10 @@
 #ifndef PhysicsTools_NanoAOD_TableOutputBranches_h
 #define PhysicsTools_NanoAOD_TableOutputBranches_h
 
+#include <TTree.h>
+
 #include <string>
 #include <vector>
-#include <TTree.h>
 #include "FWCore/Framework/interface/OccurrenceForOutput.h"
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/Provenance/interface/ProductDescription.h"
@@ -11,6 +12,7 @@
 
 class TableOutputBranches {
 public:
+<<<<<<< HEAD
   TableOutputBranches(const edm::ProductDescription *desc, const edm::EDGetToken &token)
       : m_token(token), m_extension(DontKnowYetIfMainOrExtension), m_branchesBooked(false) {
     if (desc->className() != "nanoaod::FlatTable")
