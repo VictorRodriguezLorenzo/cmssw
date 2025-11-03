@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "boost/algorithm/string.hpp"
+#include <unordered_map>
+#include <unordered_set>
 
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/NanoAOD/interface/MergeableCounterTable.h"
@@ -54,6 +56,11 @@ public:
   void addWeightGroupToTable(std::vector<nanoaod::FlatTable>& weightTablevec,
                              const WeightGroupDataContainer& weightInfos,
                              WeightsContainer& allWeights) const;
+  void accumulateWeightSums(Counter& counter,
+                            const WeightGroupDataContainer& weightInfos,
+                            const WeightsContainer& allWeights,
+                            double centralWeight,
+                            std::unordered_set<std::string>& registeredNames) const;
   // Need to either pass the handle or a pointer to avoid a copy and conversion
   // to the base class
   WeightGroupDataContainer weightDataPerType(edm::Handle<GenWeightInfoProduct>& weightsInfoHandle,
@@ -233,8 +240,9 @@ void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
   iEvent.put(std::move(outM), "genModel");
 
   WeightsContainer lheWeights;
+  const GenWeightProduct* lheWeightProduct = nullptr;
   if (foundLheWeights) {
-    const GenWeightProduct* lheWeightProduct = lheWeightHandle.product();
+    lheWeightProduct = lheWeightHandle.product();
     lheWeights = lheWeightProduct->weights();
   }
 
@@ -263,6 +271,24 @@ void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
     fillTableIgnoringGroups(*weightTablevec, weightInfos.at(inGen), genWeights, nStoreUngroupedGen_, "GenWeight");
   else
     addWeightGroupToTable(*weightTablevec, weightInfos.at(inGen), genWeights);
+
+  std::unordered_set<std::string> registeredWeightSums;
+
+  if (foundLheWeights && !ignoreLheGroups_ && lheWeightProduct != nullptr) {
+    accumulateWeightSums(counter,
+                         weightInfos.at(inLHE),
+                         lheWeights,
+                         lheWeightProduct->centralWeight(),
+                         registeredWeightSums);
+  }
+
+  if (!ignoreGenGroups_) {
+    accumulateWeightSums(counter,
+                         weightInfos.at(inGen),
+                         genWeights,
+                         genWeightProduct->centralWeight(),
+                         registeredWeightSums);
+  }
 
   iEvent.put(std::move(weightTablevec), "LHEWeightTableVec");
 }
@@ -389,6 +415,51 @@ void GenWeightsTableProducer::addWeightGroupToTable(std::vector<nanoaod::FlatTab
     weightTablevec.emplace_back(weights.size(), entryName, false);
     weightTablevec.back().addColumn<float>("", weights, label, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
 
+    typeCount[weightType]++;
+  }
+}
+
+void GenWeightsTableProducer::accumulateWeightSums(Counter& counter,
+                                                   const WeightGroupDataContainer& weightInfos,
+                                                   const WeightsContainer& allWeights,
+                                                   double centralWeight,
+                                                   std::unordered_set<std::string>& registeredNames) const {
+  std::unordered_map<gen::WeightType, int> typeCount = {};
+  for (auto& type : gen::allWeightTypes)
+    typeCount[type] = 0;
+
+  std::unordered_map<gen::WeightType, std::string> weightTypeNames;
+  for (size_t i = 0; i < weightgroups_.size(); i++) {
+    weightTypeNames[weightgroups_[i]] = outputnames_[i];
+  }
+
+  for (const auto& groupInfo : weightInfos) {
+    gen::WeightType weightType = groupInfo.group->weightType();
+    if (weightType != gen::WeightType::kScaleWeights && weightType != gen::WeightType::kPdfWeights)
+      continue;
+
+    auto itName = weightTypeNames.find(weightType);
+    if (itName == weightTypeNames.end())
+      continue;
+
+    std::string entryName = itName->second;
+    if (typeCount[weightType] > 0) {
+      entryName.append("AltSet");
+      entryName.append(std::to_string(typeCount[weightType]));
+    }
+
+    if (!registeredNames.insert(entryName).second) {
+      typeCount[weightType]++;
+      continue;
+    }
+
+    std::vector<double> weights = allWeights.at(groupInfo.index);
+    if (weightType == gen::WeightType::kScaleWeights) {
+      const auto& scaleGroup = *static_cast<const gen::ScaleWeightGroupInfo*>(groupInfo.group);
+      weights = orderedScaleWeights(weights, scaleGroup).second;
+    }
+
+    counter.incLHE(centralWeight, weights, entryName);
     typeCount[weightType]++;
   }
 }
@@ -521,20 +592,50 @@ void GenWeightsTableProducer::globalEndRunProduce(edm::Run& iRun,
                                                   CounterMap const* runCounterMap) const {
   auto out = std::make_unique<nanoaod::MergeableCounterTable>();
 
-  for (auto x : runCounterMap->countermap) {
-	  auto& runCounter = x.second;
+  for (const auto& x : runCounterMap->countermap) {
+    const auto& runCounter = x.second;
 
-	  std::string clean_label = x.first;
-	  for (auto& c : clean_label) {
-		  if (!std::isalnum(c) && c != '_') c = '_';
-	  }
+    std::string clean_label = x.first;
+    for (auto& c : clean_label) {
+      if (!std::isalnum(c) && c != '_')
+        c = '_';
+    }
 
-	  std::string label = std::string("_") + clean_label;
-	  std::string doclabel = (!x.first.empty()) ? (std::string(", for model label ") + x.first) : "";
+    std::string label = std::string("_") + clean_label;
+    std::string doclabel = (!x.first.empty()) ? (std::string(", for model label ") + x.first) : "";
 
-	  out->addInt("genEventCount" + label, "event count" + doclabel, runCounter.num_);
-	  out->addFloat("genEventSumw" + label, "sum of gen weights" + doclabel, runCounter.sumw_);
-	  out->addFloat("genEventSumw2" + label, "sum of gen (weight^2)" + doclabel, runCounter.sumw2_);
+    out->addInt("genEventCount" + label, "event count" + doclabel, runCounter.num_);
+    out->addFloat("genEventSumw" + label, "sum of gen weights" + doclabel, runCounter.sumw_);
+    out->addFloat("genEventSumw2" + label, "sum of gen (weight^2)" + doclabel, runCounter.sumw2_);
+
+
+    //std::cout << "[GenWeightCounters] BEGIN" << std::endl;
+    //std::cout << "  label = " << label << std::endl;
+    //std::cout << "  doclabel = " << doclabel << std::endl;
+    //std::cout << "  # groups = " << runCounter.weightSumMap_.size() << std::endl;
+
+    for (const auto& weightSumEntry : runCounter.weightSumMap_) {
+      const auto& sums = weightSumEntry.second;
+      std::string sumName = weightSumEntry.first;
+
+      auto pos = sumName.rfind("Weight");
+      if (pos != std::string::npos) {
+        sumName.replace(pos, 6, "Sumw");
+      } else {
+        sumName.append("Sumw");
+      }
+
+      std::string nName = "n" + sumName;
+
+      std::vector<double> sumsAsDouble(sums.begin(), sums.end());
+
+      out->addInt(nName + label,
+                  "number of weights contributing to " + weightSumEntry.first + doclabel,
+                  static_cast<nanoaod::MergeableCounterTable::int_accumulator>(sums.size()));
+      out->addVFloat(sumName + label,
+                     "sum of generator weights for " + weightSumEntry.first + doclabel,
+                     sumsAsDouble);
+    }
   }
   iRun.put(std::move(out));
 }
