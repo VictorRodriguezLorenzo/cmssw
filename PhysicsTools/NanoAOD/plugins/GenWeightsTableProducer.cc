@@ -213,7 +213,8 @@ void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
   // table for gen info, always available
   auto outGeninfo = std::make_unique<nanoaod::FlatTable>(1, "genWeight", true);
   outGeninfo->setDoc("generator weight");
-  outGeninfo->addColumnValue<float>("", genInfo.weight(), "generator weight");
+  outGeninfo->addColumnValue<float>(
+      "", genInfo.weight(), "generator weight", nanoaod::FlatTable::FloatColumn);
   iEvent.put(std::move(outGeninfo), "GENWeight");
   // this will take care of sum of genWeights
   counter.incGenOnly(genWeight);
