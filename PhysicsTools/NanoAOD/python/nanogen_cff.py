@@ -4,11 +4,11 @@ from PhysicsTools.NanoAOD.globals_cff import genTable,genFilterTable
 from PhysicsTools.NanoAOD.met_cff import metMCTable
 from PhysicsTools.NanoAOD.genparticles_cff import *
 from PhysicsTools.NanoAOD.particlelevel_cff import *
-from PhysicsTools.NanoAOD.genWeightsTable_cfi import *
-from PhysicsTools.NanoAOD.genVertex_cff import *
-from PhysicsTools.NanoAOD.common_cff import Var,CandVars
 from PhysicsTools.NanoAOD.simpleSingletonCandidateFlatTableProducer_cfi import simpleSingletonCandidateFlatTableProducer
 from RecoJets.JetProducers.ak4GenJets_cfi import ak4GenJets
+from PhysicsTools.NanoAOD.genWeights_cff import *
+from PhysicsTools.NanoAOD.genVertex_cff import *
+from PhysicsTools.NanoAOD.common_cff import Var,CandVars
 
 nanoMetadata = cms.EDProducer("UniqueStringProducer",
     strings = cms.PSet(
@@ -19,6 +19,7 @@ nanoMetadata = cms.EDProducer("UniqueStringProducer",
 
 
 nanogenSequence = cms.Sequence(
+<<<<<<< HEAD
     nanoMetadata+
     cms.Sequence(particleLevelTask)+
     genJetTable+
@@ -110,7 +111,7 @@ def customizeNanoGEN(process):
     process.genParticleTable.src = "genParticles"
     process.patJetPartonsNano.particles = "genParticles"
     process.particleLevel.src = "genParticles2HepMC:unsmeared"
-
+    
     process.genJetTable.src = "ak4GenJetsNoNu"
     process.genJetAK8Table.src = "ak8GenJetsNoNu"
     process.tauGenJetsForNano.GenParticles = "genParticles"
