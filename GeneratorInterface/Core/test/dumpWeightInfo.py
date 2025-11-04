@@ -23,8 +23,7 @@ print("Number of weight groups in weightInfo is", len(weightInfo.weights()))
 for j, weights in enumerate(weightInfo.weights()):
     print("-"*10, "Looking at entry", j, "length is", len(weights),"-"*10)
     matching = weightInfoProd.orderedWeightGroupInfo(j)
-    print("name = {}; type is {}; Well formed? {}".format(
-    matching.name(), matching.weightType(), str(matching.isWellFormed()))) 
+    print(f"name = {matching.name()}; type is {matching.weightType()}; Well formed? {str(matching.isWellFormed())}")
     print("Group description", matching.description())
     if matching.weightType() == 's':
         for var in [(x, y) for x in ["05", "1", "2"] for y in ["05", "1", "2"]]:
@@ -40,5 +39,5 @@ for j, weights in enumerate(weightInfo.weights()):
             info = matching.weightMetaInfo(i)
             print("   ID, localIndex, globalIndex, label, set:", info.id, info.localIndex, info.globalIndex, info.label, matching.name())
         except:
-            print("--> Entry {} in group {} does not have any associated metaInfo!".format(i, matching.name()))
+            print(f"--> Entry {i} in group {matching.name()} does not have any associated metaInfo!")
     print("-"*80)
