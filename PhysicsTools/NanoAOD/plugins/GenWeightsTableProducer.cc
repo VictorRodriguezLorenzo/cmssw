@@ -166,22 +166,21 @@ protected:
 };
 
 GenWeightsTableProducer::GenWeightsTableProducer(edm::ParameterSet const& params)
-    : lheWeightTokens_(edm::vector_transform(
-          params.getParameter<std::vector<edm::InputTag>>("lheWeights"),
-          [this](const edm::InputTag& tag) { return consumes<GenWeightProduct>(tag); })),
+    : lheWeightTokens_(
+          edm::vector_transform(params.getParameter<std::vector<edm::InputTag>>("lheWeights"),
+                                [this](const edm::InputTag& tag) { return consumes<GenWeightProduct>(tag); })),
       lheWeightInfoTokens_(edm::vector_transform(
           params.getParameter<std::vector<edm::InputTag>>("lheWeights"),
           [this](const edm::InputTag& tag) { return consumes<GenWeightInfoProduct, edm::InRun>(tag); })),
-      genWeightTokens_(edm::vector_transform(
-          params.getParameter<std::vector<edm::InputTag>>("genWeights"),
-          [this](const edm::InputTag& tag) { return consumes<GenWeightProduct>(tag); })),
+      genWeightTokens_(
+          edm::vector_transform(params.getParameter<std::vector<edm::InputTag>>("genWeights"),
+                                [this](const edm::InputTag& tag) { return consumes<GenWeightProduct>(tag); })),
       genWeightInfoTokens_(edm::vector_transform(
           params.getParameter<std::vector<edm::InputTag>>("genWeights"),
           [this](const edm::InputTag& tag) { return consumes<GenWeightInfoProduct, edm::InLumi>(tag); })),
-      genEventInfoToken_(consumes<GenEventInfoProduct>(
-          params.getParameter<edm::InputTag>("genEvent"))),
-      genLumiInfoHeadTag_(consumes<GenLumiInfoHeader, edm::InLumi>(
-          params.getParameter<edm::InputTag>("genLumiInfoHeader"))),
+      genEventInfoToken_(consumes<GenEventInfoProduct>(params.getParameter<edm::InputTag>("genEvent"))),
+      genLumiInfoHeadTag_(
+          consumes<GenLumiInfoHeader, edm::InLumi>(params.getParameter<edm::InputTag>("genLumiInfoHeader"))),
       weightgroups_(edm::vector_transform(params.getParameter<std::vector<std::string>>("weightgroups"),
                                           [](auto& c) { return gen::WeightType(c.at(0)); })),
       outputnames_(params.getParameter<std::vector<std::string>>("outputNames")),
@@ -194,8 +193,7 @@ GenWeightsTableProducer::GenWeightsTableProducer(edm::ParameterSet const& params
       ignoreLheGroups_(params.getUntrackedParameter<bool>("ignoreLheGroups", false)),
       ignoreGenGroups_(params.getUntrackedParameter<bool>("ignoreGenGroups", false)),
       nStoreUngroupedLhe_(params.getUntrackedParameter<int>("nStoreUngroupedLhe", 10)),
-      nStoreUngroupedGen_(params.getUntrackedParameter<int>("nStoreUngroupedGen", 10))
-{
+      nStoreUngroupedGen_(params.getUntrackedParameter<int>("nStoreUngroupedGen", 10)) {
   if (weightgroups_.size() != maxGroupsPerType_.size() || weightgroups_.size() != outputnames_.size())
     throw std::invalid_argument(
         "Inputs 'weightgroups', 'maxGroupsPerType', and 'outputNames' must have equal size! "
@@ -208,9 +206,6 @@ GenWeightsTableProducer::GenWeightsTableProducer(edm::ParameterSet const& params
   produces<std::string>("genModel");
   produces<std::vector<nanoaod::FlatTable>>("LHEWeightTableVec");
 }
-
-
-
 
 void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // access counter for weight sums
@@ -230,8 +225,7 @@ void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
   // table for gen info, always available
   auto outGeninfo = std::make_unique<nanoaod::FlatTable>(1, "genWeight", true);
   outGeninfo->setDoc("generator weight");
-  outGeninfo->addColumnValue<float>(
-      "", genInfo.weight(), "generator weight", nanoaod::FlatTable::FloatColumn);
+  outGeninfo->addColumnValue<float>("", genInfo.weight(), "generator weight", nanoaod::FlatTable::FloatColumn);
   iEvent.put(std::move(outGeninfo), "GENWeight");
   // this will take care of sum of genWeights
   counter.incGenOnly(genWeight);
@@ -276,19 +270,13 @@ void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
   std::unordered_set<std::string> registeredWeightSums;
 
   if (foundLheWeights && !ignoreLheGroups_ && lheWeightProduct != nullptr) {
-    accumulateWeightSums(counter,
-                         weightInfos.at(inLHE),
-                         lheWeights,
-                         lheWeightProduct->centralWeight(),
-                         registeredWeightSums);
+    accumulateWeightSums(
+        counter, weightInfos.at(inLHE), lheWeights, lheWeightProduct->centralWeight(), registeredWeightSums);
   }
 
   if (!ignoreGenGroups_) {
-    accumulateWeightSums(counter,
-                         weightInfos.at(inGen),
-                         genWeights,
-                         genWeightProduct->centralWeight(),
-                         registeredWeightSums);
+    accumulateWeightSums(
+        counter, weightInfos.at(inGen), genWeights, genWeightProduct->centralWeight(), registeredWeightSums);
   }
 
   iEvent.put(std::move(weightTablevec), "LHEWeightTableVec");
@@ -364,7 +352,6 @@ void GenWeightsTableProducer::fillTableIgnoringGroups(std::vector<nanoaod::FlatT
 
   weightTablevec.emplace_back(weights.size(), tablename, false);
   weightTablevec.back().addColumn<float>("", weights, tableInfo, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
-
 }
 
 void GenWeightsTableProducer::addWeightGroupToTable(std::vector<nanoaod::FlatTable>& weightTablevec,
@@ -609,7 +596,6 @@ void GenWeightsTableProducer::globalEndRunProduce(edm::Run& iRun,
     out->addFloat("genEventSumw" + label, "sum of gen weights" + doclabel, runCounter.sumw_);
     out->addFloat("genEventSumw2" + label, "sum of gen (weight^2)" + doclabel, runCounter.sumw2_);
 
-
     //std::cout << "[GenWeightCounters] BEGIN" << std::endl;
     //std::cout << "  label = " << label << std::endl;
     //std::cout << "  doclabel = " << doclabel << std::endl;
@@ -633,9 +619,7 @@ void GenWeightsTableProducer::globalEndRunProduce(edm::Run& iRun,
       out->addInt(nName + label,
                   "number of weights contributing to " + weightSumEntry.first + doclabel,
                   static_cast<nanoaod::MergeableCounterTable::int_accumulator>(sums.size()));
-      out->addVFloat(sumName + label,
-                     "sum of generator weights for " + weightSumEntry.first + doclabel,
-                     sumsAsDouble);
+      out->addVFloat(sumName + label, "sum of generator weights for " + weightSumEntry.first + doclabel, sumsAsDouble);
     }
   }
   iRun.put(std::move(out));
