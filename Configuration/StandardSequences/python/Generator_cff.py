@@ -80,7 +80,7 @@ genstepfilter = HLTrigger.HLTfilters.triggerResultsFilter_cfi.triggerResultsFilt
     triggerConditions = cms.vstring()
 )
 
-pgenWithWeight = cms.Sequence(cms.SequencePlaceholder("randomEngineStateProducer")+VertexSmearing+GenSmeared+GeneInfo+genWeightsSeq+genJetMET, PPSTransportTask)
+pgenWithWeight = cms.Sequence(cms.SequencePlaceholder("randomEngineStateProducer")+VertexSmearing+GenSmeared+GeneInfo+genWeightsSeq+genJetMET)#, PPSTransportTask)
 
 
 from Configuration.ProcessModifiers.genWeightAddition_cff import genWeightAddition
