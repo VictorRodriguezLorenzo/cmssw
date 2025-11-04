@@ -32,7 +32,9 @@ namespace gen {
 
   bool WeightHelper::isOrphanPdfWeightGroup(ParsedWeight& weight) const {
     std::pair<std::string, int> pairLHA;
-    try { pairLHA = LHAPDF::lookupPDF(stoi(searchAttributes("pdf", weight))); } catch (...) {
+    try {
+      pairLHA = LHAPDF::lookupPDF(stoi(searchAttributes("pdf", weight)));
+    } catch (...) {
       return false;
     }
 
@@ -98,8 +100,10 @@ namespace gen {
 
     if (dynNumText.empty()) {
       int ret = scaleGroup.setMuRMuFIndex(weight.index, weight.id, muR, muF);
-      if (ret==1 and debug_)
-        std::cout << "ScaleWeightGroupInfo::setMuRMuFIndex(): invalid values found: " << muR << " " << ScaleWeightGroupInfo::isValidValue(muR) << ", " << muF << " " << ScaleWeightGroupInfo::isValidValue(muF) << std::endl;
+      if (ret == 1 and debug_)
+        std::cout << "ScaleWeightGroupInfo::setMuRMuFIndex(): invalid values found: " << muR << " "
+                  << ScaleWeightGroupInfo::isValidValue(muR) << ", " << muF << " "
+                  << ScaleWeightGroupInfo::isValidValue(muF) << std::endl;
     } else {
       std::string dynType = searchAttributes("dyn_name", weight);
       try {
@@ -214,9 +218,11 @@ namespace gen {
           toRemove.push_back(i);
           const auto& weightInfo = pdfGroup.weightMetaInfo(0);
           int ret = centralWeight.addContainedId(weightInfo.globalIndex, weightInfo.id, weightInfo.label, 1, 1);
-          if (ret==2 and debug_) {
+          if (ret == 2 and debug_) {
             std::cout << "ScaleWeightGroupInfo::setMuRMuFIndex(): missing index, full list is: ";
-            std::copy(centralWeight.muIndices().begin(),centralWeight.muIndices().end(),std::ostream_iterator<size_t>(std::cout,","));
+            std::copy(centralWeight.muIndices().begin(),
+                      centralWeight.muIndices().end(),
+                      std::ostream_iterator<size_t>(std::cout, ","));
             std::cout << std::endl;
           }
         }
@@ -234,8 +240,9 @@ namespace gen {
     // checks
     unsigned i = 0;
     for (const auto& group : weightGroups) {
-      std::cout << std::boolalpha << i << ": " << group->name() << " [" << static_cast<std::underlying_type<gen::WeightType>::type>(group->weightType()) << "] (" << group->firstId() << "-" << group->lastId()
-                << "): " << group->isWellFormed() << std::endl;
+      std::cout << std::boolalpha << i << ": " << group->name() << " ["
+                << static_cast<std::underlying_type<gen::WeightType>::type>(group->weightType()) << "] ("
+                << group->firstId() << "-" << group->lastId() << "): " << group->isWellFormed() << std::endl;
       if (group->weightType() == gen::WeightType::kScaleWeights) {
         const auto& groupScale = *static_cast<gen::ScaleWeightGroupInfo*>(group.get());
         std::cout << groupScale.centralIndex() << " ";

@@ -151,7 +151,6 @@ public:
       lheVpt = std::hypot(pup[v.first][0] + pup[v.second][0], pup[v.first][1] + pup[v.second][1]);
     }
 
-
     out.addColumnValue<uint8_t>("Njets", lheNj, "Number of jets (partons) at LHE step");
     out.addColumnValue<uint8_t>("Nb", lheNb, "Number of b partons at LHE step");
     out.addColumnValue<uint8_t>("Nc", lheNc, "Number of c partons at LHE step");
@@ -159,7 +158,7 @@ public:
     out.addColumnValue<uint8_t>("Nglu", lheNglu, "Number of gluon partons at LHE step");
     out.addColumnValue<float>("HT", lheHT, "HT, scalar sum of parton pTs at LHE step");
     out.addColumnValue<float>(
-        "HTIncoming", lheHTIncoming, "HT, scalar sum of parton pTs at LHE step, restricted to partons"); 
+        "HTIncoming", lheHTIncoming, "HT, scalar sum of parton pTs at LHE step, restricted to partons");
     out.addColumnValue<float>("Vpt", lheVpt, "pT of the W or Z boson at LHE step");
     out.addColumnValue<uint8_t>("NpNLO", lheProd.npNLO(), "number of partons at NLO");
     out.addColumnValue<uint8_t>("NpLO", lheProd.npLO(), "number of partons at LO");
@@ -172,25 +171,30 @@ public:
 
     auto outPart = std::make_unique<nanoaod::FlatTable>(vals_pt.size(), "LHEPart", false);
     outPart->addColumn<float>("pt", vals_pt, "Pt of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>("eta", vals_eta, "Pseudorapidity of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>("phi", vals_phi, "Phi of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>("mass", vals_mass, "Mass of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>("incomingpz", vals_pz, "Pz of incoming LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    
+    outPart->addColumn<float>(
+        "eta", vals_eta, "Pseudorapidity of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+    outPart->addColumn<float>(
+        "phi", vals_phi, "Phi of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+    outPart->addColumn<float>(
+        "mass", vals_mass, "Mass of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+    outPart->addColumn<float>(
+        "incomingpz", vals_pz, "Pz of incoming LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+
     outPart->addColumn<int>("pdgId", vals_pid, "PDG ID of LHE particles");
     outPart->addColumn<int>("status", vals_status, "LHE particle status; -1:incoming, 1:outgoing");
     outPart->addColumn<int>("spin", vals_spin, "Spin of LHE particles");
-    
+
     if (storeAllLHEInfo_) {
       outPart->addColumn<int>("color1", vals_col1, "First color index of LHE particles");
       outPart->addColumn<int>("color2", vals_col2, "Second color index of LHE particles");
       outPart->addColumn<int>("mother1", vals_mother1, "First mother index of LHE particles");
       outPart->addColumn<int>("mother2", vals_mother2, "Second mother index of LHE particles");
-      outPart->addColumn<float>("lifetime", vals_time, "Own lifetime of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+      outPart->addColumn<float>(
+          "lifetime", vals_time, "Own lifetime of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
     }
     return outPart;
   }
-  
+
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
     desc.add<std::vector<edm::InputTag>>(

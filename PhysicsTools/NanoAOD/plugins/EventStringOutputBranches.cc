@@ -27,15 +27,16 @@ namespace {
   }
 }  // namespace
 
-void
-EventStringOutputBranches::updateEventStringNames(TTree & tree, const std::string & evstring)
-{
+void EventStringOutputBranches::updateEventStringNames(TTree& tree, const std::string& evstring) {
   bool found = false;
-  for (auto & existing : m_evStringBranches) {
+  for (auto& existing : m_evStringBranches) {
     existing.buffer = false;
-    if (evstring==existing.title) {existing.buffer = true; found=true;}
+    if (evstring == existing.title) {
+      existing.buffer = true;
+      found = true;
+    }
   }
-  if (!found && (!evstring.empty())){
+  if (!found && (!evstring.empty())) {
     std::string branchName = sanitizeBranchName(evstring);
     std::string uniqueName = branchName;
     unsigned int duplicate = 1;
@@ -44,25 +45,26 @@ EventStringOutputBranches::updateEventStringNames(TTree & tree, const std::strin
                        [&uniqueName](const NamedBranchPtr& existing) { return existing.name == uniqueName; })) {
       uniqueName = branchName + "_" + std::to_string(duplicate++);
     }
-    NamedBranchPtr nb(uniqueName,evstring);
+    NamedBranchPtr nb(uniqueName, evstring);
     bool backFillValue = false;
     nb.branch = tree.Branch(nb.name.c_str(), &backFillValue, (nb.name + "/O").c_str());
     nb.branch->SetTitle(nb.title.c_str());
-    for(size_t i=0;i<m_fills;i++) nb.branch->Fill(); // Back fill
+    for (size_t i = 0; i < m_fills; i++)
+      nb.branch->Fill();  // Back fill
     nb.buffer = true;
     m_evStringBranches.push_back(nb);
-    for (auto & existing : m_evStringBranches) existing.branch->SetAddress(&(existing.buffer)); // m_evStringBranches might have been resized
+    for (auto& existing : m_evStringBranches)
+      existing.branch->SetAddress(&(existing.buffer));  // m_evStringBranches might have been resized
   }
 }
 
-void EventStringOutputBranches::fill(const edm::EventForOutput &iEvent,TTree & tree) 
-{
-  if ((!m_update_only_at_new_lumi) || m_lastLumi!=iEvent.id().luminosityBlock()) {
+void EventStringOutputBranches::fill(const edm::EventForOutput& iEvent, TTree& tree) {
+  if ((!m_update_only_at_new_lumi) || m_lastLumi != iEvent.id().luminosityBlock()) {
     edm::Handle<std::string> handle;
     iEvent.getByToken(m_token, handle);
-    const std::string & evstring = *handle;
-    m_lastLumi=iEvent.id().luminosityBlock();
-    updateEventStringNames(tree,evstring);
+    const std::string& evstring = *handle;
+    m_lastLumi = iEvent.id().luminosityBlock();
+    updateEventStringNames(tree, evstring);
   }
- m_fills++;
+  m_fills++;
 }

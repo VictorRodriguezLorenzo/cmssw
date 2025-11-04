@@ -445,7 +445,6 @@ void NanoAODOutputModule::fillDescriptions(edm::ConfigurationDescriptions& descr
                                          "keep nanoaodUniqueString_nanoMetadata_*_*"};
   edm::one::OutputModule<>::fillDescription(desc);
 
-
   // Used by Workflow management for their own meta data
   edm::ParameterSetDescription dataSet;
   dataSet.setAllowAnything();
