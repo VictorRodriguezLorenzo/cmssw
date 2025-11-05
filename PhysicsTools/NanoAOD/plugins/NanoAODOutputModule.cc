@@ -24,7 +24,7 @@
 // user include files
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/NanoAOD/interface/UniqueString.h"
-#include "DataFormats/Provenance/interface/BranchDescription.h"
+#include "DataFormats/Provenance/interface/ProductDescription.h"
 #include "DataFormats/Provenance/interface/BranchType.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
 #include "FWCore/Framework/interface/EventForOutput.h"
@@ -165,8 +165,6 @@ NanoAODOutputModule::NanoAODOutputModule(edm::ParameterSet const& pset)
       m_fakeName(pset.getUntrackedParameter<bool>("fakeNameForCrab", false)),
       m_autoFlush(pset.getUntrackedParameter<int>("autoFlush", -10000000)),
       m_processHistoryRegistry() {}
-
-NanoAODOutputModule::~NanoAODOutputModule() {}
 
 void NanoAODOutputModule::write(edm::EventForOutput const& iEvent) {
   // Get data from 'e' and write it to the file
@@ -460,7 +458,6 @@ void NanoAODOutputModule::fillDescriptions(edm::ConfigurationDescriptions& descr
   desc.addUntracked<int>("autoFlush", -10000000)->setComment("Autoflush parameter for ROOT file");
 
   // replace with whatever you want to get from the EDM by default
->>>>>>> d074cc83cb7 (First commit for Randomized Parameters weight handling implementation)
   const std::vector<std::string> keep = {"drop *",
                                          "keep nanoaodFlatTable_*Table_*_*",
                                          "keep edmTriggerResults_*_*_*",

@@ -41,6 +41,7 @@ public:
 
   void setPDF(const PDF &pdf) { pdf_ = std::make_unique<PDF>(pdf); }
   void addWeight(const WGT &wgt) { weights_.push_back(wgt); }
+  void clearWeights() { weights_.clear(); }
   void addComment(const std::string &line) { comments_.push_back(line); }
 
   double originalXWGTUP() const { return originalXWGTUP_; }

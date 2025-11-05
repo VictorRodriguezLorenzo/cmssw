@@ -19,7 +19,6 @@ nanoMetadata = cms.EDProducer("UniqueStringProducer",
 
 
 nanogenSequence = cms.Sequence(
-<<<<<<< HEAD
     nanoMetadata+
     cms.Sequence(particleLevelTask)+
     genJetTable+
