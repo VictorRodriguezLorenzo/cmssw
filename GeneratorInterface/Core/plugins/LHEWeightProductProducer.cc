@@ -147,6 +147,8 @@ std::shared_ptr<GenWeightInfoProdData> LHEWeightProductProducer::globalBeginRun(
 
 void LHEWeightProductProducer::globalBeginRunProduce(edm::Run& run, const edm::EventSetup& es) const {
   const auto& productInfo = *runCache(run.index());
+  if (!productInfo.makeNewProduct)
+    return;
   auto prod = std::make_unique<GenWeightInfoProduct>(productInfo.product);
   run.emplace(groupPutToken_, std::move(prod));
 }
