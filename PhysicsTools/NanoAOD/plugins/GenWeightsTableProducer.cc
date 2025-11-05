@@ -224,7 +224,7 @@ void GenWeightsTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
   // table for gen info, always available
   auto outGeninfo = std::make_unique<nanoaod::FlatTable>(1, "genWeight", true);
   outGeninfo->setDoc("generator weight");
-  outGeninfo->addColumnValue<float>("", genInfo.weight(), "generator weight", nanoaod::FlatTable::FloatColumn);
+  outGeninfo->addColumnValue<float>("", genInfo.weight(), "generator weight");
   iEvent.put(std::move(outGeninfo), "GENWeight");
   // this will take care of sum of genWeights
   counter.incGenOnly(genWeight);
@@ -350,7 +350,7 @@ void GenWeightsTableProducer::fillTableIgnoringGroups(std::vector<nanoaod::FlatT
     tableInfo.append("WARNING: " + warnings);
 
   weightTablevec.emplace_back(weights.size(), tablename, false);
-  weightTablevec.back().addColumn<float>("", weights, tableInfo, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+  weightTablevec.back().addColumn<float>("", weights, tableInfo, lheWeightPrecision_);
 }
 
 void GenWeightsTableProducer::addWeightGroupToTable(std::vector<nanoaod::FlatTable>& weightTablevec,
@@ -400,7 +400,7 @@ void GenWeightsTableProducer::addWeightGroupToTable(std::vector<nanoaod::FlatTab
       entryName.append(std::to_string(typeCount[weightType]));
     }
     weightTablevec.emplace_back(weights.size(), entryName, false);
-    weightTablevec.back().addColumn<float>("", weights, label, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    weightTablevec.back().addColumn<float>("", weights, label, lheWeightPrecision_);
 
     typeCount[weightType]++;
   }

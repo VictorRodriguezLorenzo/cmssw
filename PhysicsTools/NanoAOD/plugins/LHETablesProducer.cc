@@ -168,17 +168,13 @@ public:
       out.addColumnValue<float>("Scale", scale, "Per-event scale");
       out.addColumnValue<uint8_t>("ProcessID", idproc, "Process id (as in the card ordering)");
     }
-
+    
     auto outPart = std::make_unique<nanoaod::FlatTable>(vals_pt.size(), "LHEPart", false);
-    outPart->addColumn<float>("pt", vals_pt, "Pt of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>(
-        "eta", vals_eta, "Pseudorapidity of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>(
-        "phi", vals_phi, "Phi of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>(
-        "mass", vals_mass, "Mass of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
-    outPart->addColumn<float>(
-        "incomingpz", vals_pz, "Pz of incoming LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+    outPart->addColumn<float>("pt", vals_pt, "Pt of LHE particles", this->precision_);
+    outPart->addColumn<float>("eta", vals_eta, "Pseudorapidity of LHE particles", this->precision_);
+    outPart->addColumn<float>("phi", vals_phi, "Phi of LHE particles", this->precision_);
+    outPart->addColumn<float>("mass", vals_mass, "Mass of LHE particles", this->precision_);
+    outPart->addColumn<float>("incomingpz", vals_pz, "Pz of incoming LHE particles", this->precision_);
 
     outPart->addColumn<int>("pdgId", vals_pid, "PDG ID of LHE particles");
     outPart->addColumn<int>("status", vals_status, "LHE particle status; -1:incoming, 1:outgoing");
@@ -190,7 +186,7 @@ public:
       outPart->addColumn<int>("mother1", vals_mother1, "First mother index of LHE particles");
       outPart->addColumn<int>("mother2", vals_mother2, "Second mother index of LHE particles");
       outPart->addColumn<float>(
-          "lifetime", vals_time, "Own lifetime of LHE particles", nanoaod::FlatTable::FloatColumn, this->precision_);
+		      "lifetime", vals_time, "Own lifetime of LHE particles", this->precision_);
     }
     return outPart;
   }

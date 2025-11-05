@@ -166,8 +166,6 @@ NanoAODOutputModule::NanoAODOutputModule(edm::ParameterSet const& pset)
       m_autoFlush(pset.getUntrackedParameter<int>("autoFlush", -10000000)),
       m_processHistoryRegistry() {}
 
-NanoAODOutputModule::~NanoAODOutputModule() {}
-
 void NanoAODOutputModule::write(edm::EventForOutput const& iEvent) {
   // Get data from 'e' and write it to the file
   edm::Service<edm::JobReport> jr;
@@ -460,7 +458,6 @@ void NanoAODOutputModule::fillDescriptions(edm::ConfigurationDescriptions& descr
   desc.addUntracked<int>("autoFlush", -10000000)->setComment("Autoflush parameter for ROOT file");
 
   // replace with whatever you want to get from the EDM by default
->>>>>>> d074cc83cb7 (First commit for Randomized Parameters weight handling implementation)
   const std::vector<std::string> keep = {"drop *",
                                          "keep nanoaodFlatTable_*Table_*_*",
                                          "keep edmTriggerResults_*_*_*",
