@@ -6,18 +6,13 @@
 #include <TTree.h>
 #include "FWCore/Framework/interface/LuminosityBlockForOutput.h"
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
-#include "DataFormats/Provenance/interface/ProductDescription.h"
+#include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
 
 class LumiOutputBranches {
 public:
-  LumiOutputBranches(const edm::ProductDescription *desc, const edm::EDGetToken &token)
-      : m_token(token),
-        m_singleton(false),
-        m_extension(DontKnowYetIfMainOrExtension),
-        m_counter(0),
-        m_counterBranch(nullptr),
-        m_branchesBooked(false) {
+  LumiOutputBranches(const edm::BranchDescription *desc, const edm::EDGetToken &token)
+      : m_token(token), m_extension(DontKnowYetIfMainOrExtension), m_branchesBooked(false) {
     if (desc->className() != "nanoaod::FlatTable")
       throw cms::Exception("Configuration", "NanoAODOutputModule can only write out nanoaod::FlatTable objects");
   }
@@ -35,8 +30,7 @@ private:
   bool m_singleton;
   enum { IsMain = 0, IsExtension = 1, DontKnowYetIfMainOrExtension = 2 } m_extension;
   std::string m_doc;
-  typedef Int_t CounterType;
-  CounterType m_counter;
+  UInt_t m_counter;
   struct NamedBranchPtr {
     std::string name, title, rootTypeCode;
     TBranch *branch;
