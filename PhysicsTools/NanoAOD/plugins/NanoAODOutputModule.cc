@@ -322,6 +322,7 @@ void NanoAODOutputModule::openFile(edm::FileBlock const&) {
   /* Setup file structure here */
   m_tables.clear();
   m_tableTokens.clear();
+  m_tableVectorTokens.clear();
   m_triggers.clear();
   m_triggers_areSorted = false;
   m_evstrings.clear();

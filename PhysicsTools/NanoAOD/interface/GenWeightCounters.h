@@ -3,14 +3,22 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "FWCore/Utilities/interface/Exception.h"
+
 namespace genCounter {
 
   inline void mergeSumVectors(std::vector<long double>& v1, std::vector<long double> const& v2) {
-    if (v1.empty() && !v2.empty())
-      v1.resize(v2.size(), 0);
-    if (!v2.empty())
-      for (unsigned int i = 0, n = v1.size(); i < n; ++i)
-        v1[i] += v2[i];
+    if (v2.empty())
+      return;
+    if (v1.empty()) {
+      v1 = v2;
+      return;
+    }
+    if (v1.size() != v2.size())
+      throw cms::Exception("GenWeightCounters")
+          << "Inconsistent variation-vector sizes: " << v1.size() << " vs " << v2.size();
+    for (size_t i = 0; i < v1.size(); ++i)
+      v1[i] += v2[i];
   }
 
   ///  ---- Cache object for running sums of weights ----
@@ -50,18 +58,9 @@ namespace genCounter {
       num_ += other.num_;
       sumw_ += other.sumw_;
       sumw2_ += other.sumw2_;
-      // if weightMap_ for "this" is empty, create map elements with empty
-      // vectors before merging
-      if (weightSumMap_.empty() && !other.weightSumMap_.empty()) {
-        for (auto& wmap : other.weightSumMap_) {
-          std::vector<long double> temp;
-          weightSumMap_.insert({wmap.first, temp});
-        }
-      }
 
-      for (auto& wmap : weightSumMap_) {
-        if (other.weightSumMap_.find(wmap.first) != other.weightSumMap_.end())
-          mergeSumVectors(wmap.second, other.weightSumMap_.at(wmap.first));
+      for (const auto& entry : other.weightSumMap_) {
+        mergeSumVectors(weightSumMap_[entry.first], entry.second);
       }
     }
 
@@ -86,8 +85,9 @@ namespace genCounter {
     }
 
     void clear() {
-      for (auto x : countermap)
-        x.second.clear();
+      countermap.clear();
+      active_el = nullptr;
+      active_label.clear();
     }
 
     void setLabel(std::string label) {

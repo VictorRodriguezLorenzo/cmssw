@@ -32,6 +32,8 @@ public:
   void setNumWeightSets(int num) { weightsVector_.resize(num); }
   void addWeightSet() { weightsVector_.push_back({}); }
   void addWeight(double weight, int setEntry, int weightNum) {
+    if (setEntry < 0 || setEntry >= static_cast<int>(weightsVector_.size()) || weightNum < 0)
+      throw cms::Exception("GenWeightProduct") << "Invalid group or local weight index";
     if (weightsVector_.empty() && setEntry == 0)
       addWeightSet();
     int maxSets = static_cast<int>(weightsVector_.size());

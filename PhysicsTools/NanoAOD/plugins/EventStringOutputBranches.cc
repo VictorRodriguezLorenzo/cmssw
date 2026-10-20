@@ -59,11 +59,17 @@ void EventStringOutputBranches::updateEventStringNames(TTree& tree, const std::s
 }
 
 void EventStringOutputBranches::fill(const edm::EventForOutput& iEvent, TTree& tree) {
-  if ((!m_update_only_at_new_lumi) || m_lastLumi != iEvent.id().luminosityBlock()) {
+  const auto run = iEvent.id().run();
+  const auto lumi = iEvent.id().luminosityBlock();
+
+  if (!m_update_only_at_new_lumi || m_lastRun != run || m_lastLumi != lumi) {
     edm::Handle<std::string> handle;
     iEvent.getByToken(m_token, handle);
     const std::string& evstring = *handle;
-    m_lastLumi = iEvent.id().luminosityBlock();
+
+    m_lastRun = run;
+    m_lastLumi = lumi;
+
     updateEventStringNames(tree, evstring);
   }
   m_fills++;

@@ -102,16 +102,16 @@ std::vector<gen::WeightGroupData> GenWeightInfoProduct::pdfGroupsWithIndicesByLH
   std::vector<gen::WeightGroupData> groups;
 
   for (auto lhaid : lhaids) {
-    auto matchingPdfSet = std::find_if(pdfGroups.begin(), pdfGroups.end(), [lhaid](gen::WeightGroupData& data) {
-      const auto* pdfGroup = static_cast<const gen::PdfWeightGroupInfo*>(data.group);
-      return pdfGroup->containsLhapdfId(lhaid);
+    auto it = std::find_if(pdfGroups.begin(), pdfGroups.end(), [lhaid](const gen::WeightGroupData& data) {
+      const auto* pdf = static_cast<const gen::PdfWeightGroupInfo*>(data.group);
+      return pdf->containsLhapdfId(lhaid);
     });
-    if (matchingPdfSet != pdfGroups.end()) {
-      pdfGroups.push_back({matchingPdfSet->index, matchingPdfSet->group});
-    }
+    if (it != pdfGroups.end() && std::none_of(groups.begin(), groups.end(), [it](const gen::WeightGroupData& data) {
+          return data.index == it->index;
+        }))
+      groups.push_back(*it);
   }
-
-  return pdfGroups;
+  return groups;
 }
 
 std::vector<int> GenWeightInfoProduct::weightGroupIndicesByType(gen::WeightType type) const {

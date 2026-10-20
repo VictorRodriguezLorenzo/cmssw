@@ -86,6 +86,7 @@ namespace gen {
     size_t scaleIndex(float muR, float muF, std::string_view dynName) const;
     size_t scaleIndex(int index, std::string_view dynName) const;
     size_t scaleIndex(float muR, float muF) const;
+    size_t getOrAddDynamicScaleIndex(const std::string& name);
 
     size_t scaleIndex(int index, size_t dynNum) const { return dynVec_.at(index).at(dynNum); }
     std::vector<std::string> dynNames() const;

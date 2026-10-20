@@ -5,10 +5,14 @@
 
 namespace gen {
   void ScaleWeightGroupInfo::copy(const ScaleWeightGroupInfo& other) {
+    WeightGroupInfo::copy(other);
     muIndices_ = other.muIndices_;
     dynVec_ = other.dynVec_;
     dynNames_ = other.dynNames_;
-    WeightGroupInfo::copy(other);
+    isFunctionalFormVar_ = other.isFunctionalFormVar_;
+    containsCentral_ = other.containsCentral_;
+    lhaid_ = other.lhaid_;
+    weightIsCorrupt_ = other.weightIsCorrupt_;
   }
 
   ScaleWeightGroupInfo* ScaleWeightGroupInfo::clone() const { return new ScaleWeightGroupInfo(*this); }
@@ -17,11 +21,13 @@ namespace gen {
     int idxDiff = firstId_ - globalIndex;
     if (idxDiff > 0) {
       for (auto& entry : muIndices_) {
-        entry += idxDiff;
+        if (entry != static_cast<size_t>(-1))
+          entry += idxDiff;
       }
       for (auto& subVec : dynVec_) {
         for (auto& entry : subVec) {
-          entry += idxDiff;
+          if (entry != static_cast<size_t>(-1))
+            entry += idxDiff;
         }
       }
     }
@@ -51,17 +57,34 @@ namespace gen {
 
   void ScaleWeightGroupInfo::setDyn(
       int globalIndex, std::string id, float muR, float muF, size_t dynNum, std::string_view dynName) {
-    auto info = weightMetaInfoByGlobalIndex(id, globalIndex);
-    int index = indexFromMus(muR, muF);
-    // resize if too small
-    if (dynVec_.at(index).size() < dynNum + 1) {
+    if (!isValidValue(muR) || !isValidValue(muF)) {
+      setWeightIsCorrupt();
+      return;
+    }
+
+    const auto info = weightMetaInfoByGlobalIndex(id, globalIndex);
+    const int index = indexFromMus(muR, muF);
+    const size_t invalidIndex = static_cast<size_t>(-1);
+
+    if (dynVec_[index].size() <= dynNum) {
       for (auto& dynIt : dynVec_)
-        dynIt.resize(dynNum + 1);
+        dynIt.resize(dynNum + 1, invalidIndex);
       dynNames_.resize(dynNum + 1);
     }
 
-    if (dynNames_.at(dynNum).empty())
-      dynNames_[dynNum] = dynName;
+    if (!dynName.empty()) {
+      if (!dynNames_[dynNum].empty() && dynNames_[dynNum] != dynName) {
+        setWeightIsCorrupt();
+        return;
+      }
+      dynNames_[dynNum] = std::string(dynName);
+    }
+
+    if (dynVec_[index][dynNum] != invalidIndex) {
+      setWeightIsCorrupt();
+      return;
+    }
+
     dynVec_[index][dynNum] = info.localIndex;
   }
 
@@ -102,6 +125,14 @@ namespace gen {
         returnVec.push_back(item);
     }
     return returnVec;
+  }
+
+  size_t ScaleWeightGroupInfo::getOrAddDynamicScaleIndex(const std::string& name) {
+    auto it = std::find(dynNames_.begin(), dynNames_.end(), name);
+    if (it != dynNames_.end())
+      return std::distance(dynNames_.begin(), it);
+    dynNames_.push_back(name);
+    return dynNames_.size() - 1;
   }
 
 }  // namespace gen
