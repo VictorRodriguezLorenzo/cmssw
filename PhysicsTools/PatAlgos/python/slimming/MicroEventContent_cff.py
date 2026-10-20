@@ -2,7 +2,6 @@ import FWCore.ParameterSet.Config as cms
 
 MicroEventContent = cms.PSet(
     outputCommands = cms.untracked.vstring(
-        'drop *',
         'keep *_slimmedPhotons_*_*',
         'keep *_slimmedOOTPhotons_*_*',
         'keep *_slimmedElectrons_*_*',
@@ -14,9 +13,10 @@ MicroEventContent = cms.PSet(
         'keep *_slimmedTaus_*_*',
         'keep *_slimmedTausBoosted_*_*',
         'keep *_slimmedCaloJets_*_*',
+        'keep *_slimmedJPTJets_*_*',
         'keep *_slimmedJets_*_*',
-        # drop content created by MINIAOD DeepFlavour production
-        'drop recoBaseTagInfosOwned_slimmedJets_*_*',
+        # keep slimmedJets TagInfos, currently only PixelClusterTagInfo
+        'keep recoBaseTagInfosOwned_slimmedJets_*_*',
         'keep *_slimmedJetsAK8_*_*',
         # drop content created by MINIAOD DeepDoubleB production
         'drop recoBaseTagInfosOwned_slimmedJetsAK8_*_*',
@@ -43,6 +43,7 @@ MicroEventContent = cms.PSet(
         'drop *_*_genJets_*',
         'keep *_offlineBeamSpot_*_*',
         'keep *_offlineSlimmedPrimaryVertices_*_*',
+        'keep *_offlineSlimmedPrimaryVerticesWithBS_*_*',
         'keep patPackedCandidates_packedPFCandidates_*_*',
         'keep *_isolatedTracks_*_*',
         # low energy conversions for BPH
@@ -88,8 +89,19 @@ MicroEventContent = cms.PSet(
         'keep recoForwardProtons_ctppsProtons_*_*',
 	# displacedStandAlone muon collection for EXO
 	'keep recoTracks_displacedStandAloneMuons__*',
+        'keep recoTracks_displacedGlobalMuons__*',
+        'keep recoTracks_displacedTracks__*',
         # L1 prefiring weights
         'keep *_prefiringweight_*_*',
+        # patLowPtElectrons
+        'keep *_slimmedLowPtElectrons_*_*',
+        'keep *_gsfTracksOpenConversions_*_*',
+        # patDisplacedMuons
+        'keep *_slimmedDisplacedMuons_*_*',
+        'keep recoTrackExtras_slimmedDisplacedMuonTrackExtras_*_*',
+        'keep TrackingRecHitsOwned_slimmedDisplacedMuonTrackExtras_*_*',
+        'keep SiPixelClusteredmNewDetSetVector_slimmedDisplacedMuonTrackExtras_*_*',
+        'keep SiStripClusteredmNewDetSetVector_slimmedDisplacedMuonTrackExtras_*_*',
     )
 )
 
@@ -99,7 +111,7 @@ MicroEventContentGEN = cms.PSet(
         'keep recoGenParticles_prunedGenParticles_*_*',
         'keep *_packedPFCandidateToGenAssociation_*_*',
         'keep *_lostTracksToGenAssociation_*_*',
-        'keep LHEEventProduct_*_*_*',
+        'keep LHEEventProduct_lheWeights_*_*',
         'keep GenFilterInfo_*_*_*',
         'keep GenLumiInfoHeader_generator_*_*',
         'keep GenLumiInfoProduct_*_*_*',
@@ -110,29 +122,16 @@ MicroEventContentGEN = cms.PSet(
         'keep *_slimmedGenJetsAK8__*',
         'keep *_slimmedGenJetsAK8SoftDropSubJets__*',
         'keep *_genMetTrue_*_*',
-        # RUN
         'keep LHERunInfoProduct_*_*_*',
         'keep GenRunInfoProduct_*_*_*',
+        'keep GenWeightProduct_lheWeights_*_*',
+        'keep GenWeightProduct_genWeights_*_*',
+        'keep GenWeightInfoProduct_lheWeights_*_*',
+        'keep GenWeightInfoProduct_genWeights_*_*',
         'keep *_genParticles_xyz0_*',
         'keep *_genParticles_t0_*',
     )
 )
-
-# Only add low pT electrons for run2_miniAOD_UL or bParking era
-from Configuration.ProcessModifiers.run2_miniAOD_UL_cff import run2_miniAOD_UL
-from Configuration.Eras.Modifier_bParking_cff import bParking
-_lowPt_extraCommands = ['keep *_slimmedLowPtElectrons_*_*',
-                        'keep *_gsfTracksOpenConversions_*_*',]
-(bParking | run2_miniAOD_UL).toModify(MicroEventContent,
-                                      outputCommands = MicroEventContent.outputCommands + _lowPt_extraCommands)
-
-_bparking_vertices_extraCommands = ["keep *_offlineSlimmedPrimaryVerticesWithBS_*_*",]
-from Configuration.Eras.Modifier_run2_miniAOD_devel_cff import run2_miniAOD_devel
-(bParking | run2_miniAOD_devel).toModify(MicroEventContent, outputCommands = MicroEventContent.outputCommands + _bparking_vertices_extraCommands)
-
-_bparking_displaced_extraCommands = ['keep recoTracks_displacedGlobalMuons_*_*', 
-                                     'keep recoTracks_displacedTracks_*_*',]
-bParking.toModify(MicroEventContent,outputCommands = MicroEventContent.outputCommands + _bparking_displaced_extraCommands)
 
 # --- Only for 2018 data & MC
 _run2_HCAL_2018_extraCommands = ["keep *_packedPFCandidates_hcalDepthEnergyFractions_*"]
@@ -144,6 +143,26 @@ from Configuration.Eras.Modifier_run3_common_cff import run3_common
 run3_common.toModify(MicroEventContent, outputCommands = MicroEventContent.outputCommands + _run3_common_extraCommands)
 # ---
 
+_pp_on_AA_extraCommands = [
+    'keep patPackedCandidates_hiPixelTracks_*_*',
+    'keep patPackedCandidates_packedPFCandidatesRemoved_*_*',
+    'keep *_packedCandidateMuonID_*_*',
+    'keep *_slimmedJets_pfCandidates_*',
+    'keep floatedmValueMap_packedPFCandidateTrackChi2_*_*',
+    'keep floatedmValueMap_lostTrackChi2_*_*',
+    'keep recoCentrality_hiCentrality_*_*',
+    'keep int_centralityBin_*_*',
+    'keep recoHFFilterInfo_hiHFfilters_*_*',
+    'keep recoClusterCompatibility_hiClusterCompatibility_*_*',
+    'keep *_offlineSlimmedPrimaryVerticesRecovery_*_*',
+    'keep *_hiEvtPlane_*_*',
+    'keep *_hiEvtPlaneFlat_*_*',
+    'keep QIE10DataFrameHcalDataFrameContainer_hcalDigis_ZDC_*',
+]
+
+#from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
+#pp_on_AA.toModify(MicroEventContent, outputCommands = MicroEventContent.outputCommands + _pp_on_AA_extraCommands)
+
 MicroEventContentMC = cms.PSet(
     outputCommands = cms.untracked.vstring(MicroEventContent.outputCommands)
 )
@@ -153,6 +172,8 @@ MicroEventContentMC.outputCommands += [
                                         # RUN
                                         'keep L1GtTriggerMenuLite_l1GtTriggerMenuLite__*'
                                       ]
+#_pp_on_AA_MC_extraCommands = ['keep *_packedGenParticlesSignal_*_*','keep edmGenHIEvent_heavyIon_*_*']
+#pp_on_AA.toModify(MicroEventContentMC, outputCommands = MicroEventContentMC.outputCommands + _pp_on_AA_MC_extraCommands)
 
 from Configuration.Eras.Modifier_strips_vfp30_2016_cff import strips_vfp30_2016
 strips_vfp30_2016.toModify(MicroEventContentMC, outputCommands = MicroEventContentMC.outputCommands + [
@@ -166,6 +187,7 @@ cms.untracked.PSet(branch = cms.untracked.string("patTriggerObjectStandAlones_sl
 cms.untracked.PSet(branch = cms.untracked.string("patPackedGenParticles_packedGenParticles__*"),splitLevel=cms.untracked.int32(99)),
 cms.untracked.PSet(branch = cms.untracked.string("patJets_slimmedJets__*"),splitLevel=cms.untracked.int32(99)),
 cms.untracked.PSet(branch = cms.untracked.string("recoVertexs_offlineSlimmedPrimaryVertices__*"),splitLevel=cms.untracked.int32(99)),
+cms.untracked.PSet(branch = cms.untracked.string("recoVertexs_offlineSlimmedPrimaryVerticesWithBS__*"),splitLevel=cms.untracked.int32(99)),
 cms.untracked.PSet(branch = cms.untracked.string("recoCaloClusters_reducedEgamma_reducedESClusters_*"),splitLevel=cms.untracked.int32(99)),
 cms.untracked.PSet(branch = cms.untracked.string("EcalRecHitsSorted_reducedEgamma_reducedEBRecHits_*"),splitLevel=cms.untracked.int32(99)),
 cms.untracked.PSet(branch = cms.untracked.string("EcalRecHitsSorted_reducedEgamma_reducedEERecHits_*"),splitLevel=cms.untracked.int32(99)),
@@ -174,8 +196,7 @@ cms.untracked.PSet(branch = cms.untracked.string("patJets_slimmedJetsPuppi__*"),
 cms.untracked.PSet(branch = cms.untracked.string("EcalRecHitsSorted_reducedEgamma_reducedESRecHits_*"),splitLevel=cms.untracked.int32(99)),
 ])
 
-
-_phase2_hgc_extraCommands = ["keep *_slimmedElectronsFromMultiCl_*_*", "keep *_slimmedPhotonsFromMultiCl_*_*"]
+_phase2_hgc_extraCommands = ["keep *_slimmedElectronsHGC_*_*", "keep *_slimmedPhotonsHGC_*_*"]
 from Configuration.Eras.Modifier_phase2_hgcal_cff import phase2_hgcal
 phase2_hgcal.toModify(MicroEventContentMC, outputCommands = MicroEventContentMC.outputCommands + _phase2_hgc_extraCommands)
 
