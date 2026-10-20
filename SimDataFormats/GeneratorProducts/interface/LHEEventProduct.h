@@ -2,8 +2,8 @@
 #define SimDataFormats_GeneratorProducts_LHEEventProduct_h
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "SimDataFormats/GeneratorProducts/interface/LesHouches.h"
 #include "SimDataFormats/GeneratorProducts/interface/PdfInfo.h"
@@ -23,12 +23,25 @@ public:
       : hepeup_(hepeup), originalXWGTUP_(originalXWGTUP) {}
   LHEEventProduct(LHEEventProduct &&other) = default;
 
+  LHEEventProduct(const LHEEventProduct &other) {
+    hepeup_ = other.hepeup_;
+    comments_ = other.comments_;
+    if (other.pdf_)
+      pdf_ = std::make_unique<PDF>(*other.pdf_);
+    weights_ = other.weights_;
+    originalXWGTUP_ = other.originalXWGTUP_;
+    scales_ = other.scales_;
+    npLO_ = other.npLO_;
+    npNLO_ = other.npNLO_;
+  }
+ 
   LHEEventProduct &operator=(LHEEventProduct &&other) = default;
 
   ~LHEEventProduct() = default;
 
   void setPDF(const PDF &pdf) { pdf_ = std::make_unique<PDF>(pdf); }
   void addWeight(const WGT &wgt) { weights_.push_back(wgt); }
+  void clearWeights() { weights_.clear(); }
   void addComment(const std::string &line) { comments_.push_back(line); }
 
   double originalXWGTUP() const { return originalXWGTUP_; }
