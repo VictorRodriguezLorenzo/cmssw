@@ -34,8 +34,8 @@ namespace gen {
 
     template <typename T>
     std::unique_ptr<GenWeightProduct> weightProduct(const GenWeightInfoProduct& weightsInfo,
-                                                    std::vector<T> weights,
-                                                    float w0) const;
+                                                    const std::vector<T> weights,
+                                                    double w0) const;
 
     void setGuessPSWeightIdx(bool guessPSWeightIdx) {
       PartonShowerWeightGroupInfo::setGuessPSWeightIdx(guessPSWeightIdx);
@@ -76,6 +76,7 @@ namespace gen {
         {"muf", {"muF", "MUF", "muf", "facscfact"}},
         {"mur", {"muR", "MUR", "mur", "renscfact"}},
         {"pdf", {"PDF", "PDF set", "lhapdf", "pdf", "pdf set", "pdfset"}},
+	{"member", {"MemberID", "memberID", "memberid"}},
         {"dyn", {"DYN_SCALE"}},
         {"dyn_name", {"dyn_scale_choice"}},
         {"up", {"_up", "Hi"}},
@@ -90,8 +91,8 @@ namespace gen {
 
   template <typename T>
   std::unique_ptr<GenWeightProduct> WeightHelper::weightProduct(const GenWeightInfoProduct& weightsInfo,
-                                                                std::vector<T> weights,
-                                                                float w0) const {
+                                                                const std::vector<T> weights,
+                                                                double w0) const {
     auto weightProduct = std::make_unique<GenWeightProduct>(w0);
     weightProduct->setNumWeightSets(weightsInfo.numberOfGroups());
     gen::WeightGroupData groupData = {0, nullptr};

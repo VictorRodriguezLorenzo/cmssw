@@ -32,17 +32,21 @@ public:
   void setNumWeightSets(int num) { weightsVector_.resize(num); }
   void addWeightSet() { weightsVector_.push_back({}); }
   void addWeight(double weight, int setEntry, int weightNum) {
+    if (setEntry < 0 || weightNum < 0)
+      throw cms::Exception("GenWeightProduct") << "Invalid group or local weight index";
+  
     if (weightsVector_.empty() && setEntry == 0)
       addWeightSet();
-    int maxSets = static_cast<int>(weightsVector_.size());
-    if (maxSets <= setEntry)
+  
+    if (setEntry >= static_cast<int>(weightsVector_.size()))
       throw cms::Exception("GenWeightProduct")
-          << "WeightGroup index " << setEntry << " is exceeds the number of WeightGroups expected (max " << maxSets
-          << " )";
+          << "WeightGroup index " << setEntry << " exceeds the number of WeightGroups expected (max "
+          << weightsVector_.size() << ")";
+  
     auto& weights = weightsVector_[setEntry];
-    if (static_cast<int>(weights.size()) <= weightNum) {
+    if (static_cast<int>(weights.size()) <= weightNum)
       weights.resize(weightNum + 1);
-    }
+  
     weights[weightNum] = weight / centralWeight_;
   }
   const WeightsContainer& weights() const { return weightsVector_; }

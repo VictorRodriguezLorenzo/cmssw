@@ -9,8 +9,19 @@ namespace gen {
   WeightHelper::WeightHelper() {}
 
   bool WeightHelper::isScaleWeightGroup(const ParsedWeight& weight) const {
-    return (weight.groupname.find("scale_variation") != std::string::npos ||
-            weight.groupname.find("Central scale variation") != std::string::npos);
+    if (weight.groupname.find("scale_variation") != std::string::npos ||
+        weight.groupname.find("Central scale variation") != std::string::npos)
+      return true;
+  
+    if (weight.groupname.empty()) {
+      const auto& content = weight.content;
+      return content.find("dyn_scale_choice=") != std::string::npos ||
+             content.find("DYN_SCALE=") != std::string::npos ||
+             content.find("MUR=") != std::string::npos ||
+             content.find("MUF=") != std::string::npos;
+    }
+  
+    return false;
   }
 
   bool WeightHelper::isPdfWeightGroup(const ParsedWeight& weight) const {
@@ -83,94 +94,176 @@ namespace gen {
   }
 
   void WeightHelper::updateScaleInfo(gen::ScaleWeightGroupInfo& scaleGroup, const ParsedWeight& weight) const {
-    std::string muRText = searchAttributes("mur", weight);
-    std::string muFText = searchAttributes("muf", weight);
-    std::string dynNumText = searchAttributes("dyn", weight);
-    float muR, muF;
+    const std::string muRText = searchAttributes("mur", weight);
+    const std::string muFText = searchAttributes("muf", weight);
+    const std::string dynNumText = searchAttributes("dyn", weight);
+    const std::string dynName = searchAttributes("dyn_name", weight);
+    float muR = 1.0f, muF = 1.0f;
     try {
-      muR = std::stof(muRText);
-      muF = std::stof(muFText);
-    } catch (std::invalid_argument& e) {
+      size_t pos = 0;
+
+      if (!muRText.empty()) {
+        muR = std::stof(muRText, &pos);
+        if (pos != muRText.size())
+          throw std::invalid_argument("Invalid muR");
+      }
+
+      if (!muFText.empty()) {
+        muF = std::stof(muFText, &pos);
+        if (pos != muFText.size())
+          throw std::invalid_argument("Invalid muF");
+      }
+    } catch (const std::exception& e) {
       if (debug_)
-        std::cout << "Tried to convert (" << muR << ", " << muF << ") to an int" << std::endl;
+        std::cout << "Invalid scale weight: " << weight.content << " (" << e.what() << ")" << std::endl;
       scaleGroup.setWeightIsCorrupt();
       return;
-      /// do something
     }
 
-    if (dynNumText.empty()) {
-      int ret = scaleGroup.setMuRMuFIndex(weight.index, weight.id, muR, muF);
-      if (ret == 1 and debug_)
-        std::cout << "ScaleWeightGroupInfo::setMuRMuFIndex(): invalid values found: " << muR << " "
-                  << ScaleWeightGroupInfo::isValidValue(muR) << ", " << muF << " "
-                  << ScaleWeightGroupInfo::isValidValue(muF) << std::endl;
+    if (!ScaleWeightGroupInfo::isValidValue(muR) || !ScaleWeightGroupInfo::isValidValue(muF)) {
+      scaleGroup.setWeightIsCorrupt();
+      return;
+    }
+
+    if (debug_)
+      std::cout << "Scale weight " << weight.id << " | content=" << weight.content << " | muR=" << muR
+                << " | muF=" << muF << " | dyn=" << dynNumText << " | dyn_name=" << dynName << std::endl;
+
+    if (dynNumText.empty() && dynName.empty()) {
+      scaleGroup.setMuRMuFIndex(weight.index, weight.id, muR, muF);
     } else {
-      std::string dynType = searchAttributes("dyn_name", weight);
       try {
-        int dynNum = std::stoi(dynNumText);
-        scaleGroup.setDyn(weight.index, weight.id, muR, muF, dynNum, dynType);
-      } catch (std::invalid_argument& e) {
+        size_t dynNum = 0;
+
+        if (!dynNumText.empty()) {
+          size_t pos = 0;
+          long parsed = std::stol(dynNumText, &pos);
+          if (pos != dynNumText.size() || parsed < 0)
+            throw std::invalid_argument("Invalid dynamic scale index");
+          dynNum = static_cast<size_t>(parsed);
+        } else {
+          dynNum = scaleGroup.getOrAddDynamicScaleIndex(dynName);
+        }
+
+        scaleGroup.setDyn(weight.index, weight.id, muR, muF, dynNum, dynName);
+      } catch (const std::exception& e) {
         if (debug_)
-          std::cout << "Tried to convert (" << dynNumText << ") to an int" << std::endl;
+          std::cout << "Invalid dynamic scale: " << weight.content << " (" << e.what() << ")" << std::endl;
         scaleGroup.setWeightIsCorrupt();
-        /// do something here
       }
     }
 
     if (scaleGroup.lhaid() == -1) {
-      std::string lhaidText = searchAttributes("pdf", weight);
-      try {
-        scaleGroup.setLhaid(std::stoi(lhaidText));
-      } catch (std::invalid_argument& e) {
-        scaleGroup.setLhaid(-1);
-        // do something here
+      const std::string lhaidText = searchAttributes("pdf", weight);
+
+      if (!lhaidText.empty()) {
+        try {
+          size_t pos = 0;
+          int lhaid = std::stoi(lhaidText, &pos);
+          if (pos != lhaidText.size())
+            throw std::invalid_argument("Invalid PDF ID");
+          scaleGroup.setLhaid(lhaid);
+        } catch (const std::exception&) {
+          scaleGroup.setWeightIsCorrupt();
+        }
       }
     }
   }
 
   int WeightHelper::lhapdfId(const ParsedWeight& weight, gen::PdfWeightGroupInfo& pdfGroup) const {
-    std::string lhaidText = searchAttributes("pdf", weight);
+    const std::string pdfText = searchAttributes("pdf", weight);
+    const std::string memberText = searchAttributes("member", weight);
 
-    if (debug_)
-      std::cout << "Looking for LHAPDF info in ID " << lhaidText << std::endl;
+    try {
+      auto parseInteger = [](const std::string& text) {
+        size_t pos = 0;
+        int value = std::stoi(text, &pos);
+        if (pos != text.size() || value < 0)
+          throw std::invalid_argument("Invalid LHAPDF integer");
+        return value;
+      };
 
-    if (!lhaidText.empty()) {
-      try {
-        return std::stoi(lhaidText);
-      } catch (std::invalid_argument& e) {
-        pdfGroup.setIsWellFormed(false);
+      if (!pdfText.empty()) {
+        const int pdfId = parseInteger(pdfText);
+
+        if (!memberText.empty()) {
+          const int memberId = parseInteger(memberText);
+          const auto pdfInfo = LHAPDF::lookupPDF(pdfId);
+          if (pdfInfo.first.empty())
+            throw std::invalid_argument("Unknown LHAPDF set");
+
+          const int parentId = pdfId - pdfInfo.second;
+          const int actualId = parentId + memberId;
+          const auto memberInfo = LHAPDF::lookupPDF(actualId);
+          if (memberInfo.first != pdfInfo.first || memberInfo.second != memberId)
+            throw std::invalid_argument("PDF member is not part of the declared set");
+          if (pdfInfo.second != 0 && pdfInfo.second != memberId)
+            throw std::invalid_argument("Conflicting PDF and MemberID attributes");
+
+          return actualId;
+        }
+        return pdfId;
       }
-    } else if (!pdfGroup.lhaIds().empty()) {
-      return pdfGroup.lhaIds().back() + 1;
-    } else {
-      if (debug_)
-        std::cout << "Looking up LHAPDF ID from name" << weight.groupname << std::endl;
+
+      if (!memberText.empty()) {
+        if (pdfGroup.parentLhapdfId() >= 0)
+          return pdfGroup.parentLhapdfId() + parseInteger(memberText);
+
+        const int parentId = LHAPDF::lookupLHAPDFID(weight.groupname);
+        if (parentId >= 0)
+          return parentId + parseInteger(memberText);
+
+        return -1;
+      }
+      if (!pdfGroup.lhaIds().empty())
+        return pdfGroup.lhaIds().back() + 1;
+
       return LHAPDF::lookupLHAPDFID(weight.groupname);
+
+    } catch (const std::exception& e) {
+      if (debug_)
+        std::cout << "Invalid PDF weight: " << weight.content << " (" << e.what() << ")" << std::endl;
+
+      pdfGroup.setIsWellFormed(false);
+      return -1;
     }
-    return -1;
   }
 
   void WeightHelper::updatePdfInfo(gen::PdfWeightGroupInfo& pdfGroup, const ParsedWeight& weight) const {
-    int lhaid = lhapdfId(weight, pdfGroup);
+    const int lhaid = lhapdfId(weight, pdfGroup);
+
+    if (lhaid < 0) {
+      pdfGroup.setIsWellFormed(false);
+      return;
+    }
+
     if (debug_)
       std::cout << "LHAID identified as " << lhaid << std::endl;
-    if (pdfGroup.parentLhapdfId() < 0) {
-      int parentId = lhaid - LHAPDF::lookupPDF(lhaid).second;
-      pdfGroup.setParentLhapdfInfo(parentId);
-      pdfGroup.setUncertaintyType(gen::kUnknownUnc);
 
-      std::string description = "";
+    if (pdfGroup.parentLhapdfId() < 0) {
+      const auto pdfInfo = LHAPDF::lookupPDF(lhaid);
+
+      if (pdfInfo.first.empty()) {
+        pdfGroup.setIsWellFormed(false);
+        return;
+      }
+
+      const int parentId = lhaid - pdfInfo.second;
+      pdfGroup.setParentLhapdfInfo(parentId);
+
+      std::string description;
+
       if (pdfGroup.uncertaintyType() == gen::kHessianUnc)
         description += "Hessian ";
       else if (pdfGroup.uncertaintyType() == gen::kMonteCarloUnc)
         description += "Monte Carlo ";
-      description += "Uncertainty sets for LHAPDF set " + LHAPDF::lookupPDF(parentId).first;
-      description += " with LHAID = " + std::to_string(parentId);
-      description += "; ";
+
+      description += "Uncertainty sets for LHAPDF set " + pdfInfo.first;
+      description += " with LHAID = " + std::to_string(parentId) + "; ";
 
       pdfGroup.appendDescription(description);
     }
-    // after setup parent info, add lhaid
+
     pdfGroup.addLhaid(lhaid);
   }
 
@@ -343,6 +436,14 @@ namespace gen {
       else if (group->weightType() == gen::WeightType::kPartonShowerWeights)
         updatePartonShowerInfo(*static_cast<gen::PartonShowerWeightGroupInfo*>(group.get()), weight);
     }
+
+    for (auto& group : weightGroups) {
+      if (group->weightType() == gen::WeightType::kPdfWeights) {
+        auto& pdfGroup = *static_cast<gen::PdfWeightGroupInfo*>(group.get());
+        pdfGroup.updateAlphasInfo();
+      }
+    }
+
     if (debug_) {
       std::cout << "Groups BEFORE cleanup:" << std::endl;
       printWeights(weightGroups);
